@@ -4,6 +4,7 @@ import axios from "axios";
 
 interface UserData {
   name: string;
+  email?: string;
   profilePictureUrl: string | null;
 }
 
@@ -16,6 +17,7 @@ interface DebugInfo {
   responseError?: string;
   responseStatus?: number;
   responseData?: unknown;
+  imageValidation?: string;
   [key: string]: unknown;
 }
 
@@ -90,6 +92,40 @@ export default function LinkedInCallback() {
       });
   }, [searchParams]);
 
+  useEffect(() => {
+    if (userData?.profilePictureUrl) {
+      console.log("Profile picture URL:", userData.profilePictureUrl);
+
+      // Check if the URL is valid by making a HEAD request
+      fetch(userData.profilePictureUrl, { method: "HEAD" })
+        .then((response) => {
+          console.log(
+            "Image validation response:",
+            response.status,
+            response.ok
+          );
+          if (!response.ok) {
+            setDebugInfo((prev) => ({
+              ...prev,
+              imageValidation: `Failed with status ${response.status}`,
+            }));
+          } else {
+            setDebugInfo((prev) => ({
+              ...prev,
+              imageValidation: "Image URL is accessible",
+            }));
+          }
+        })
+        .catch((err) => {
+          console.error("Image validation error:", err);
+          setDebugInfo((prev) => ({
+            ...prev,
+            imageValidation: `Error: ${err.message}`,
+          }));
+        });
+    }
+  }, [userData]);
+
   if (loading)
     return (
       <div className="flex flex-col items-center justify-center h-screen">
@@ -118,12 +154,37 @@ export default function LinkedInCallback() {
   return (
     <div className="flex flex-col items-center justify-center h-screen">
       <h1 className="text-2xl mb-2">Welcome, {userData.name}</h1>
+      {userData.email && <p className="text-gray-600 mb-4">{userData.email}</p>}
+
       {userData.profilePictureUrl ? (
-        <img
-          src={userData.profilePictureUrl}
-          alt="Profile"
-          className="rounded-full w-24 h-24 mb-4"
-        />
+        <div className="mb-4">
+          <img
+            src={userData.profilePictureUrl}
+            alt="Profile"
+            className="rounded-full w-24 h-24"
+            onError={(e) => {
+              console.error(
+                "Image failed to load:",
+                userData.profilePictureUrl
+              );
+              e.currentTarget.style.display = "none";
+              (
+                e.currentTarget.nextElementSibling as HTMLElement
+              ).style.display = "flex";
+            }}
+          />
+          <div
+            className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center hidden"
+            style={{ display: "none" }}
+          >
+            <span className="text-gray-500 text-xl">
+              {userData.name.charAt(0)}
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 mt-1 text-center break-all">
+            {userData.profilePictureUrl}
+          </p>
+        </div>
       ) : (
         <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
           <span className="text-gray-500 text-xl">
@@ -131,6 +192,7 @@ export default function LinkedInCallback() {
           </span>
         </div>
       )}
+
       <a href="/" className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">
         Go Back
       </a>
