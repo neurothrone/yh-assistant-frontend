@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import axios from "axios";
+import { getBackendUrl } from "./utils/env";
+import { ErrorMessage } from "./components/ErrorMessage";
 
 interface UserData {
   name: string;
@@ -24,6 +26,7 @@ export default function LinkedInCallback() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<boolean>(false);
   const [debugInfo, setDebugInfo] = useState<DebugInfo>({
     code: null,
     error: null,
@@ -36,12 +39,13 @@ export default function LinkedInCallback() {
     const code = searchParams.get("code");
     const errorParam = searchParams.get("error");
     const errorDescription = searchParams.get("error_description");
+    const backendUrl = getBackendUrl();
 
     setDebugInfo({
       code: code ? `${code.substring(0, 10)}...` : null,
       error: errorParam,
       errorDescription,
-      backendUrl: import.meta.env.VITE_BACKEND_URL || "Not set",
+      backendUrl: backendUrl || "Not set",
       currentUrl: window.location.href,
     });
 
@@ -57,15 +61,15 @@ export default function LinkedInCallback() {
       return;
     }
 
-    const backendUrl =
-      import.meta.env.VITE_BACKEND_URL ||
-      "https://yh-assistant-backend.azurewebsites.net";
-    console.log("Sending code to backend:", backendUrl);
+    if (!backendUrl) {
+      setConfigError(true);
+      setLoading(false);
+      return;
+    }
 
     axios
       .post(`${backendUrl}/api/linkedin/exchange`, { code })
       .then((res) => {
-        console.log("Backend response:", res.data);
         setUserData(res.data);
         setLoading(false);
       })
@@ -89,6 +93,20 @@ export default function LinkedInCallback() {
         setLoading(false);
       });
   }, [searchParams]);
+
+  if (configError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <ErrorMessage
+          title="Configuration Error"
+          message="Backend URL is not configured. Please set the VITE_BACKEND_URL environment variable."
+        />
+        <a href="/" className="bg-blue-600 text-white px-4 py-2 rounded">
+          Back to Home
+        </a>
+      </div>
+    );
+  }
 
   if (loading)
     return (
@@ -138,7 +156,7 @@ export default function LinkedInCallback() {
             }}
           />
           <div
-            className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center hidden"
+            className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center"
             style={{ display: "none" }}
           >
             <span className="text-gray-500 text-xl">
