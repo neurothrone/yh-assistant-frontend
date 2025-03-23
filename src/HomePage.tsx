@@ -3,7 +3,7 @@ const redirectUri = encodeURIComponent(
 );
 const linkedInAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${
   import.meta.env.VITE_LINKEDIN_CLIENT_ID
-}&redirect_uri=${redirectUri}&scope=r_liteprofile%20r_emailaddress`;
+}&redirect_uri=${redirectUri}&scope=openid%20profile%20email`;
 
 export default function HomePage() {
   return (
