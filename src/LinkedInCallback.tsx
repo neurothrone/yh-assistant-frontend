@@ -17,10 +17,6 @@ interface DebugInfo {
   responseError?: string;
   responseStatus?: number;
   responseData?: unknown;
-  imageValidation?: string;
-  originalImageUrl?: string | null;
-  proxiedImageUrl?: string | null;
-  [key: string]: unknown;
 }
 
 export default function LinkedInCallback() {
@@ -28,8 +24,6 @@ export default function LinkedInCallback() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [proxiedImageUrl, setProxiedImageUrl] = useState<string | null>(null);
-  const [useProxiedImage, setUseProxiedImage] = useState(true);
   const [debugInfo, setDebugInfo] = useState<DebugInfo>({
     code: null,
     error: null,
@@ -96,62 +90,6 @@ export default function LinkedInCallback() {
       });
   }, [searchParams]);
 
-  useEffect(() => {
-    if (userData?.profilePictureUrl) {
-      console.log("Original profile picture URL:", userData.profilePictureUrl);
-
-      // Create a proxied URL through our backend
-      const backendUrl =
-        import.meta.env.VITE_BACKEND_URL ||
-        "https://yh-assistant-backend.azurewebsites.net";
-      const proxyUrl = `${backendUrl}/api/linkedin/proxy-image?url=${encodeURIComponent(
-        userData.profilePictureUrl
-      )}`;
-      console.log("Proxied image URL:", proxyUrl);
-      setProxiedImageUrl(proxyUrl);
-
-      setDebugInfo((prev) => ({
-        ...prev,
-        originalImageUrl: userData.profilePictureUrl,
-        proxiedImageUrl: proxyUrl,
-      }));
-    }
-  }, [userData]);
-
-  useEffect(() => {
-    if (userData?.profilePictureUrl && proxiedImageUrl) {
-      console.log("Validating proxied image URL:", proxiedImageUrl);
-
-      // Check if the URL is valid by making a HEAD request
-      fetch(proxiedImageUrl, { method: "HEAD" })
-        .then((response) => {
-          console.log(
-            "Proxied image validation response:",
-            response.status,
-            response.ok
-          );
-          if (!response.ok) {
-            setDebugInfo((prev) => ({
-              ...prev,
-              imageValidation: `Proxy failed with status ${response.status}`,
-            }));
-          } else {
-            setDebugInfo((prev) => ({
-              ...prev,
-              imageValidation: "Proxied image URL is accessible",
-            }));
-          }
-        })
-        .catch((err) => {
-          console.error("Proxied image validation error:", err);
-          setDebugInfo((prev) => ({
-            ...prev,
-            imageValidation: `Proxy error: ${err.message}`,
-          }));
-        });
-    }
-  }, [userData, proxiedImageUrl]);
-
   if (loading)
     return (
       <div className="flex flex-col items-center justify-center h-screen">
@@ -185,19 +123,13 @@ export default function LinkedInCallback() {
       {userData.profilePictureUrl ? (
         <div className="mb-4">
           <img
-            src={
-              useProxiedImage && proxiedImageUrl
-                ? proxiedImageUrl
-                : userData.profilePictureUrl
-            }
+            src={userData.profilePictureUrl}
             alt="Profile"
             className="rounded-full w-24 h-24"
             onError={(e) => {
               console.error(
                 "Image failed to load:",
-                useProxiedImage && proxiedImageUrl
-                  ? proxiedImageUrl
-                  : userData.profilePictureUrl
+                userData.profilePictureUrl
               );
               e.currentTarget.style.display = "none";
               (
@@ -212,24 +144,6 @@ export default function LinkedInCallback() {
             <span className="text-gray-500 text-xl">
               {userData.name.charAt(0)}
             </span>
-          </div>
-          <div className="text-xs text-gray-500 mt-1 text-center">
-            <p className="break-all">
-              {useProxiedImage && proxiedImageUrl
-                ? "Proxied Image"
-                : "Original LinkedIn Image"}
-            </p>
-            <button
-              onClick={() => setUseProxiedImage(!useProxiedImage)}
-              className="underline text-blue-500 mt-1"
-            >
-              Switch to {useProxiedImage ? "original" : "proxied"} image
-            </button>
-            <p className="break-all mt-1">
-              {useProxiedImage && proxiedImageUrl
-                ? proxiedImageUrl
-                : userData.profilePictureUrl}
-            </p>
           </div>
         </div>
       ) : (
