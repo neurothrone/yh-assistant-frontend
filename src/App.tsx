@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router";
-import HomePage from "./HomePage.tsx";
-import LinkedInCallback from "./LinkedInCallback.tsx";
+import HomePage from "./HomePage";
+import LinkedInCallback from "./LinkedInCallback";
 
 function App() {
   return (
